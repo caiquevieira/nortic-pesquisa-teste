@@ -215,8 +215,8 @@
     <!-- 1. Boas-vindas -->
     <section class="screen" id="s-welcome">
       <div class="card">
-        <h1 tabindex="-1">Sua opinião vale um prêmio garantido.</h1>
-        <p>Responda a algumas perguntas rápidas e gire a roleta. Todo participante ganha um prêmio.</p>
+        <h1 tabindex="-1" id="welcome-title">Sua opinião vale um prêmio garantido.</h1>
+        <p id="welcome-text">Responda a algumas perguntas rápidas e gire a roleta. Todo participante ganha um prêmio.</p>
         <button class="btn" id="btn-start" type="button">Começar agora</button>
         <p class="muted" style="margin:14px 0 0">Para participar, você precisa estar no estabelecimento.</p>
       </div>
@@ -920,6 +920,12 @@
     $('#btn-review-thanks-skip').textContent = CONFIG.REVIEW_BTN_SKIP;
     $('#thanks-title').textContent = CONFIG.SURVEY_DONE_TITLE;
     $('#thanks-text').textContent = CONFIG.SURVEY_DONE_TEXT;
+    // A tela de boas-vindas só promete roleta/prêmio quando REWARD_MODE é 'ROLETA' — com
+    // 'NENHUM' o texto padrão do HTML ficaria incorreto (prometeria um sorteio inexistente).
+    if (CONFIG.REWARD_MODE !== 'ROLETA') {
+      $('#welcome-title').textContent = 'Sua opinião é muito importante para nós.';
+      $('#welcome-text').textContent = 'Responda a algumas perguntas rápidas sobre a sua experiência.';
+    }
     // O link abre a avaliação numa aba nova normalmente (target="_blank") e, ao mesmo
     // tempo, a tela atual avança sozinha para o agradecimento — sem preventDefault.
     $('#btn-review-rate').addEventListener('click', () => show('s-review-thanks'));
