@@ -243,7 +243,7 @@
     <section class="screen" id="s-identify">
       <form class="card" id="form-identify" novalidate>
         <h2 tabindex="-1">Como podemos chamar você?</h2>
-        <p>Usaremos seus dados apenas para identificar o seu prêmio.</p>
+        <p id="identify-text">Usaremos seus dados apenas para identificar o seu prêmio.</p>
         <div class="field">
           <label for="in-name">Nome</label>
           <input id="in-name" type="text" autocomplete="name" autocapitalize="words" maxlength="80" placeholder="Seu nome">
@@ -925,6 +925,7 @@
     if (CONFIG.REWARD_MODE !== 'ROLETA') {
       $('#welcome-title').textContent = 'Sua opinião é muito importante para nós.';
       $('#welcome-text').textContent = 'Responda a algumas perguntas rápidas sobre a sua experiência.';
+      $('#identify-text').textContent = 'Usaremos seus dados apenas para esta pesquisa.';
     }
     // O link abre a avaliação numa aba nova normalmente (target="_blank") e, ao mesmo
     // tempo, a tela atual avança sozinha para o agradecimento — sem preventDefault.
