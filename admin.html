@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F7F7">
+<title>Painel administrativo</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- CONFIG e o tema visual (theme.js) vêm antes do <style>/<script> abaixo, pra já aplicar o
+     tema no primeiro paint. Compartilhados com index.html, caixa.html e fidelidade.html. -->
+<script src="config.js"></script>
+<script src="theme.js"></script>
+<style>
+  :root {
+    --tema-fundo: #F7F7F7;
+    --tema-texto: #000000;
+    --tema-texto-secundario: #6B6B6B;
+    --tema-card: #FFFFFF;
+    --tema-borda: #E0E0E0;
+    --tema-primaria: #000000;
+    --tema-texto-sobre-primaria: #FFD100;
+    --tema-acento: #FFD100;
+    --tema-texto-sobre-acento: var(--tema-texto);
+    --tema-fonte-titulo: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --tema-fonte-corpo: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* Raio de canto NÃO é compartilhado com raioCard do tema de propósito: o admin já usa uma
+       escala própria, menor (14–16px, hardcoded em cada regra), mais perto da própria demo da
+       Nortic do que o raioCard pensado pra index/caixa/fidelidade (28px→24px); usar o mesmo
+       nome de variável faria o theme.js sobrescrever os dois ao mesmo tempo. */
+    --tema-sombra-card: 0 2px 8px rgba(0,0,0,.06);
+    /* Só o admin usa estas duas: tom claro de destaque (barra de filtros ativos) e as 4
+       séries de gráfico sem significado semântico (prêmios/categorias) — nunca as cores
+       semânticas de NPS/status, que ficam fixas mais abaixo neste mesmo arquivo. */
+    --tema-destaque-fundo: #FFF9E0;
+    --tema-destaque-borda: #F0DFA0;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* alguns elementos (ex.: .link) setam display própria e sobrescreveriam o hidden padrão sem isso */
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--tema-fundo);
+    color: var(--tema-texto);
+    font-family: var(--tema-fonte-corpo);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Login ---------- */
+  #login-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 24px calc(24px + 56px);
+  }
+  .login-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--tema-card);
+    border: 1px solid var(--tema-borda);
+    box-shadow: var(--tema-sombra-card);
+    border-radius: 16px;
+    padding: 32px 28px;
+  }
+  .login-card img { height: 48px; max-width: 70%; object-fit: contain; margin-bottom: 18px; display: block; }
+  .login-card .logo-placeholder {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 2px dashed var(--tema-texto); border-radius: 14px;
+    padding: 10px 22px; margin-bottom: 18px; opacity: .55;
+    font-weight: 800; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .login-card h1 { font-size: 21px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; font-family: var(--tema-fonte-titulo); }
+  .login-card p { font-size: 14px; color: var(--tema-texto-secundario); margin: 0 0 24px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  .field { margin-bottom: 16px; }
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--tema-texto); /* mais marcada que a borda do card — legível dentro dele */
+    border-radius: 10px;
+    font-size: 16px;
+    background: var(--tema-fundo);
+    color: var(--tema-texto);
+  }
+  input:focus { outline: none; border-color: var(--tema-texto); }
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: var(--tema-primaria); color: var(--tema-texto-sobre-primaria);
+    border: none; border-radius: 999px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    transition: transform .12s ease, opacity .2s ease;
+  }
+  .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .login-error {
+    color: #B3261E; font-size: 13px; font-weight: 600;
+    margin: -6px 0 16px; display: none;
+  }
+
+  /* ---------- Dashboard ---------- */
+  #dashboard { display: none; padding: 20px 20px calc(60px + 56px); max-width: 1180px; margin: 0 auto; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-brand img { height: 32px; width: 32px; object-fit: contain; border-radius: 8px; }
+  .topbar h1 { font-size: 20px; font-weight: 800; margin: 0; font-family: var(--tema-fonte-titulo); }
+  .topbar .sub { font-size: 13px; color: var(--tema-texto-secundario); margin-top: 2px; }
+  .btn-secondary {
+    background: var(--tema-card); border: 1.5px solid var(--tema-borda);
+    border-radius: 999px; padding: 8px 18px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    white-space: nowrap; color: var(--tema-texto);
+  }
+  .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+  .panel-header-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .panel-header-row .panel-sub { margin-bottom: 0; }
+  .panel-caption { font-size: 12px; color: var(--tema-texto-secundario); text-align: center; margin-top: 8px; }
+  .link {
+    background: none; border: 0; padding: 4px 0; margin-bottom: 10px;
+    font-size: 12.5px; font-weight: 700; color: var(--tema-texto);
+    text-decoration: underline; cursor: pointer; display: block;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--tema-card); border: 1px solid var(--tema-borda);
+    box-shadow: var(--tema-sombra-card); border-radius: 14px; padding: 16px 18px;
+  }
+  .kpi-label { font-size: 12px; color: var(--tema-texto-secundario); font-weight: 600; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+  .kpi-value .unit { font-size: 14px; font-weight: 600; color: var(--tema-texto-secundario); }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+  /* Espaçamento vertical entre TODOS os blocos de 1ª linha do painel (linhas de 2 colunas
+     e painéis avulsos de largura cheia), num lugar só — >, não .panel sozinho, pra não
+     duplicar a margem dos .panel que já vivem DENTRO de um .panel-grid (esses são
+     esticados pelo grid e não devem ganhar margem própria). Bug real corrigido aqui: o
+     painel avulso "Nota média por categoria" não tinha margem nenhuma e ficava colado
+     no bloco seguinte, sem respiro. */
+  #dashboard > .panel-grid, #dashboard > .panel { margin-bottom: 16px; }
+  /* Duas colunas exatamente iguais (a .panel-grid padrão é 1.4fr/1fr) — usada na seção de
+     Promotores/Neutros/Detratores, onde os dois cards precisam ficar simétricos. */
+  .panel-grid-even { grid-template-columns: 1fr 1fr; }
+  /* As duas variantes precisam colapsar pra 1 coluna no mobile — como .panel-grid e
+     .panel-grid-even têm a mesma especificidade, listar as duas aqui (em vez de só
+     .panel-grid) garante que esta regra vence nas duas, independente da ordem de declaração
+     acima. Sem isso, .panel-grid-even ficava sempre em 2 colunas, mesmo em telas estreitas. */
+  @media (max-width: 760px) {
+    .panel-grid, .panel-grid-even { grid-template-columns: 1fr; }
+  }
+  /* .panel já garante mesma largura/padding via .panel-grid-even + a classe .panel comum;
+     isto aqui garante a mesma ALTURA DE VERDADE (não só a caixa externa, que o grid já
+     estica igual): o gráfico ocupa o espaço restante depois do título/subtítulo/legenda de
+     cada card, então os dois desenhos ficam alinhados mesmo com textos de tamanhos diferentes. */
+  /* min-width:0 é o ajuste real aqui — sem ele, um item de grid (qualquer .panel dentro de
+     .panel-grid, não só .nps-panel) usa o min-width:auto padrão, que significa "pelo menos o
+     tamanho mínimo do meu conteúdo" (ex.: o canvas do gráfico tem largura intrínseca própria
+     mesmo redimensionado por CSS). Isso fazia o card ficar mais largo que a própria célula do
+     grid — confirmado medindo: 342px de card dentro de uma célula de 335px, em TODAS as
+     linhas de .panel-grid do painel, não só a de NPS. */
+  .panel-grid > .panel { min-width: 0; }
+  .nps-panel { display: flex; flex-direction: column; }
+  /* height:auto sobrescreve o height:220px fixo de .chart-wrap — sem isso, a altura explícita
+     compete com o flex-grow e os dois gráficos ficam com tamanhos diferentes mesmo com os
+     cards (caixa externa) já do mesmo tamanho. */
+  .nps-panel .chart-wrap { height: auto; flex: 1 1 auto; min-height: 220px; min-width: 0; }
+  .panel {
+    background: var(--tema-card); border: 1px solid var(--tema-borda);
+    box-shadow: var(--tema-sombra-card); border-radius: 14px; padding: 18px 20px;
+  }
+  .panel h2 { font-size: 15px; font-weight: 700; margin: 0 0 4px; font-family: var(--tema-fonte-titulo); }
+  .panel .panel-sub { font-size: 12px; color: var(--tema-texto-secundario); margin: 0 0 14px; }
+  .chart-wrap { position: relative; height: 220px; }
+  .render-error {
+    font-size: 12.5px; color: var(--tema-texto-secundario); padding: 12px 0;
+  }
+
+  .breakdown-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .breakdown-row:last-child { margin-bottom: 0; }
+  .breakdown-label { width: 92px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .breakdown-bar-bg { flex: 1; height: 8px; background: #EFEFEF; border-radius: 999px; overflow: hidden; }
+  .breakdown-bar-fill { height: 100%; background: var(--tema-acento); border-radius: 999px; }
+  .breakdown-value { width: 34px; text-align: right; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--tema-texto-secundario); font-weight: 600; font-size: 11.5px;
+       padding: 8px 10px; border-bottom: 1px solid var(--tema-borda); white-space: nowrap; }
+  td { padding: 10px 10px; border-bottom: 1px solid #F0F0F0; vertical-align: top; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  /* Cores de status/NPS fixas de propósito (não entram no tema — ver CLAUDE.md "Identidade
+     visual"): a cor da marca de um cliente nunca deve ser confundida com "detrator", por
+     exemplo, então estas nunca seguem CONFIG.THEME. */
+  .pill-pendente { background: #FFF4CC; color: #7A5D00; }
+  .pill-concluido { background: #E3F3E4; color: #216E29; }
+  .pill-vencido { background: #F3E3E3; color: #8A2E2E; }
+  .pill-neutro { background: #EFEFEF; color: #6B6B6B; } /* Premio/Status '-' das respostas do modo fidelidade (não têm cupom) */
+  .stars { color: var(--tema-texto-secundario); font-size: 12.5px; white-space: nowrap; }
+  .comment-cell { max-width: 260px; color: #333; }
+  .comment-empty { color: #B0B0B0; }
+  .name-cell { font-weight: 600; white-space: nowrap; }
+  .empty-note { font-size: 13px; color: var(--tema-texto-secundario); padding: 8px 0; }
+
+  /* Filtro por intervalo de datas (substitui os botões Tudo/30/7 dias) */
+  .date-range-bar { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .date-field { display: flex; align-items: center; gap: 8px; }
+  .date-field label {
+    margin: 0; font-size: 12.5px; font-weight: 700; color: var(--tema-texto-secundario);
+    text-transform: none; letter-spacing: 0;
+  }
+  .date-field input[type="date"] {
+    border: 1.5px solid var(--tema-texto); background: var(--tema-fundo); border-radius: 10px;
+    padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--tema-texto);
+    font-family: inherit;
+  }
+  .date-field input[type="date"]:focus { outline: none; border-color: var(--tema-texto); }
+
+  /* Barra de filtros cruzados ativos (gerados por clique em gráfico) */
+  .active-filters-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 10px 14px;
+    background: var(--tema-destaque-fundo); border: 1px solid var(--tema-destaque-borda); border-radius: 12px;
+  }
+  .active-filters-label { font-size: 12.5px; font-weight: 700; color: var(--tema-texto-secundario); }
+  .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--tema-primaria); color: var(--tema-texto-sobre-primaria); border-radius: 999px;
+    padding: 4px 6px 4px 12px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  }
+  .filter-chip-x {
+    background: rgba(255,255,255,.15); border: 0; color: inherit; cursor: pointer;
+    width: 18px; height: 18px; border-radius: 50%; font-size: 13px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .filter-chip-x:hover { background: rgba(255,255,255,.3); }
+
+  /* Barras clicáveis (Status dos cupons) — mesmo visual de .breakdown-row, agora um <button> */
+  .breakdown-row-clickable {
+    width: 100%; background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer;
+    border-radius: 8px; transition: background .12s ease;
+  }
+  .breakdown-row-clickable:hover { background: rgba(0,0,0,.04); }
+  .breakdown-row-clickable.active .breakdown-label,
+  .breakdown-row-clickable.active .breakdown-value { color: var(--tema-texto); }
+  .breakdown-row-clickable.active .breakdown-bar-fill { background: var(--tema-texto); }
+
+  .page-btn {
+    border: 1.5px solid var(--tema-borda); background: var(--tema-card); border-radius: 999px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--tema-texto);
+  }
+  .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+
+  /* Paginação da tabela */
+  .pagination {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--tema-texto-secundario);
+  }
+
+  /* Rodapé fixo, igual ao index.html — NÃO faz parte do tema (é a marca da Underline, igual
+     em todo cliente), por isso usa valores fixos, não variáveis de tema. */
+  .site-footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; justify-content: center;
+    padding: 10px max(16px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom));
+    background: rgba(247, 247, 247, .92);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid #E0E0E0;
+  }
+  .site-footer a {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: #000000; text-decoration: none;
+    font-size: .72rem; font-weight: 700; letter-spacing: .01em;
+  }
+  .site-footer img { height: 24px; width: 24px; object-fit: contain; border-radius: 6px; display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div id="login-logo"></div>
+    <h1 id="login-title">Painel administrativo</h1>
+    <p id="login-subtitle"></p>
+    <div>
+      <div class="field">
+        <label for="in-user">Usuário</label>
+        <input type="text" id="in-user" autocomplete="username" autocapitalize="off">
+      </div>
+      <div class="field">
+        <label for="in-pass">Senha</label>
+        <input type="password" id="in-pass" autocomplete="current-password">
+      </div>
+      <p class="login-error" id="login-error"></p>
+      <button type="button" class="btn-primary" id="btn-login">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div id="topbar-logo"></div>
+      <div>
+        <h1 id="dash-title">Painel administrativo</h1>
+        <div class="sub" id="period-label">Carregando período…</div>
+      </div>
+    </div>
+    <button class="btn-secondary" id="btn-logout" type="button">Sair</button>
+  </div>
+
+  <div class="date-range-bar">
+    <div class="date-field">
+      <label for="date-start">De</label>
+      <input type="date" id="date-start">
+    </div>
+    <div class="date-field">
+      <label for="date-end">Até</label>
+      <input type="date" id="date-end">
+    </div>
+  </div>
+
+  <div class="active-filters-bar" id="active-filters-bar" hidden>
+    <span class="active-filters-label">Filtros ativos:</span>
+    <div class="filter-chips" id="active-filters-chips"></div>
+    <button class="link" id="btn-clear-filters" type="button" style="margin:0">Limpar filtros</button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Respostas</div>
+      <div class="kpi-value" id="kpi-total">–</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nota média geral</div>
+      <div class="kpi-value" id="kpi-media">– <span class="unit">/ 5</span></div>
+    </div>
+    <div class="kpi-card" id="kpi-card-resgate">
+      <div class="kpi-label">Cupons resgatados</div>
+      <div class="kpi-value" id="kpi-resgate">– <span class="unit">%</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Com comentário</div>
+      <div class="kpi-value" id="kpi-comentarios">– <span class="unit">%</span></div>
+    </div>
+  </div>
+
+  <div class="panel-grid panel-grid-even">
+    <div class="panel nps-panel">
+      <h2>Promotores, Neutros e Detratores</h2>
+      <p class="panel-sub">Distribuição do período selecionado — Promotor ≥ 4,5 · Neutro 3,5–4,4 · Detrator &lt; 3,5</p>
+      <div class="chart-wrap"><canvas id="chart-nps-donut"></canvas></div>
+      <div id="nps-donut-caption" class="panel-caption"></div>
+    </div>
+    <div class="panel nps-panel">
+      <h2>Evolução de Promotores, Neutros e Detratores</h2>
+      <p class="panel-sub" id="nps-trend-sub">Sempre o histórico completo (ignora o filtro De/Até acima) — clique num ponto ou numa cor da barra para filtrar o painel inteiro por mês/faixa</p>
+      <div class="chart-wrap"><canvas id="chart-nps-trend"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="panel">
+      <h2>Evolução da nota média</h2>
+      <p class="panel-sub" id="trend-sub">Visão mensal — clique num ponto para filtrar o painel inteiro por aquele mês</p>
+      <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Evolução da nota média por categoria</h2>
+      <p class="panel-sub" id="cat-trend-sub">Comida, atendimento e ambiente — visão mensal, clique num ponto para filtrar o painel inteiro por aquele mês</p>
+      <div class="chart-wrap"><canvas id="chart-cat-trend"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Nota média por categoria</h2>
+    <p class="panel-sub">Comida, atendimento e ambiente — média do período selecionado, de relance</p>
+    <div id="breakdown-cats"></div>
+  </div>
+
+  <div class="panel-grid" id="panel-roleta">
+    <div class="panel">
+      <h2>Prêmios sorteados</h2>
+      <p class="panel-sub">Distribuição da roleta no período</p>
+      <div class="chart-wrap" style="height:200px"><canvas id="chart-prizes"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Status dos cupons</h2>
+      <p class="panel-sub">Pendente, concluído ou vencido</p>
+      <div id="breakdown-status"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-fidelidade" hidden>
+    <h2>Cartão fidelidade</h2>
+    <p class="panel-sub">Clientes cadastrados e selos acumulados (não filtra por De/Até — é o cadastro atual)</p>
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi-card">
+        <div class="kpi-label">Clientes cadastrados</div>
+        <div class="kpi-value" id="fid-kpi-clientes">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Selos distribuídos (histórico)</div>
+        <div class="kpi-value" id="fid-kpi-selos">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Prêmios resgatados</div>
+        <div class="kpi-value" id="fid-kpi-resgates">–</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label for="fid-search">Buscar cliente</label>
+      <input type="text" id="fid-search" placeholder="Nome ou telefone">
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>Telefone</th><th>Selos atuais</th><th>Selos total</th><th>Última atividade</th></tr>
+        </thead>
+        <tbody id="fid-table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="fid-table-pagination">
+      <button class="page-btn" id="btn-fid-page-prev" type="button">&larr; Anterior</button>
+      <span id="fid-page-label">Página 1 de 1</span>
+      <button class="page-btn" id="btn-fid-page-next" type="button">Próxima &rarr;</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header-row">
+      <div>
+        <h2>Analítico de respostas</h2>
+        <p class="panel-sub">Todas as respostas do período selecionado, 20 por página</p>
+      </div>
+      <button class="btn-secondary" id="btn-export" type="button">Exportar (.xlsx)</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Cliente</th>
+            <th>Notas</th>
+            <th>Comentário</th>
+            <th>Prêmio</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="table-pagination">
+      <button class="page-btn" id="btn-page-prev" type="button">&larr; Anterior</button>
+      <span id="page-label">Página 1 de 1</span>
+      <button class="page-btn" id="btn-page-next" type="button">Próxima &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <a href="https://underlinelab.com.br" target="_blank" rel="noopener">
+    <img src="Assets/underline-logo.jpeg" alt="" width="24" height="24">
+    <span>Desenvolvido por Underline</span>
+  </a>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* =======================================================================
+   * Declarações (const/let) primeiro — TODAS, antes de qualquer function
+   * que as use ser CHAMADA. A checagem de sessão (final do arquivo) já
+   * dispara renderAll()/renderTrend()/renderPrizes(), que leem trendChart/
+   * prizeChart/ALL; se essas variáveis ainda não tiverem sido declaradas
+   * quando a checagem rodar, é "acesso antes da inicialização" e o erro
+   * (fora de qualquer safeRender) trava todo o script que viria depois.
+   * ===================================================================== */
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const loginScreen = $('#login-screen');
+  const dashboard = $('#dashboard');
+  const SESSION_KEY = 'underline-admin-session';
+  const CATS = [
+    { label: 'Comida', idx: 0 },
+    { label: 'Atendimento', idx: 1 },
+    { label: 'Ambiente', idx: 2 }
+  ];
+  // Sem significado semântico (ao contrário de NPS_COLORS/status, mais abaixo) — por isso
+  // seguem o tema quando há um (--tema-serie-1..4, escritos por theme.js a partir de
+  // acento/primária); sem tema, cai na paleta pastel padrão da Underline (mesmo tom de
+  // amarelo do NPS Neutro, #FFD54F).
+  function temaSerie(n, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--tema-serie-' + n).trim();
+    return v || fallback;
+  }
+  const PRIZE_COLORS = [
+    temaSerie(1, '#90CAF9'), temaSerie(2, '#B39DDB'), temaSerie(3, '#80CBC4'), temaSerie(4, '#FFD54F')
+  ];
+
+  let ALL = [];              // respostas carregadas do backend (só após login)
+  let trendChart = null;
+  let prizeChart = null;
+  let currentRows = [];      // último conjunto filtrado (datas + cross-filters) — usado pela
+                              // paginação da tabela e pela exportação, sem refiltrar ALL de novo
+  let tablePage = 1;         // página atual da tabela de respostas (20 por página)
+
+  // Cartão fidelidade (só quando CONFIG.LOYALTY_ENABLED): cadastro atual, sem
+  // filtro de datas (não é uma série temporal, é o estado presente de cada cliente).
+  let FID_ALL = [];
+  let fidTablePage = 1;
+  let fidSearchQuery = '';
+  const FID_TABLE_PAGE_SIZE = 20;
+
+  // Filtro por intervalo de datas (substitui os antigos botões Tudo/30/7 dias). null = sem
+  // limite naquele lado. filterEndDate é levado até o FIM do dia na hora de filtrar.
+  let filterStartDate = null;
+  let filterEndDate = null;
+
+  // Cross-filtering (estilo Power BI): clicar num elemento de QUALQUER gráfico define um
+  // filtro nessa dimensão, e TODOS os painéis (inclusive o próprio gráfico clicado) são
+  // recalculados. Várias dimensões podem estar ativas ao mesmo tempo (E lógico entre elas).
+  // "month"/"day" também fazem o papel do antigo drilldown mensal→diário: os 3 gráficos
+  // temporais (nota geral, por categoria, evolução do NPS) leem esse MESMO estado
+  // compartilhado pra decidir visão mensal vs. diária, em vez de cada um ter sua própria
+  // variável — clicar num mês já dispara as duas coisas (drilldown daquele gráfico + filtro
+  // nos outros) de propósito, então não faz sentido ter dois estados separados que podem
+  // ficar dessincronizados.
+  let crossFilters = { month: null, day: null, premio: null, status: null, npsBucket: null };
+
+  let trendMonthKeys = [];   // labels do último gráfico mensal (ou dias, se em drilldown), na
+  let trendDayKeys = [];     // ordem das barras/pontos — usados pra converter índice de clique em chave
+  let catTrendChart = null;
+  let catTrendMonthKeys = [];
+  let catTrendDayKeys = [];
+
+  // Promotores/Neutros/Detratores: rosca (respeita data + cross-filters, como o resto do
+  // painel) + evolução temporal (IGNORA o filtro de datas de propósito — sempre a partir de
+  // ALL — mas RESPEITA os cross-filters de clique, inclusive os que ela mesma gera).
+  let npsDonutChart = null;
+  let npsTrendChart = null;
+  let npsTrendMonthKeys = [];
+  let npsTrendDayKeys = [];
+
+  // Cortes de Promotor/Neutro/Detrator sobre a média das 3 notas do CSAT (1–5). Não é NPS de
+  // verdade (a pesquisa não tem a pergunta de 0–10) — é uma régua análoga, documentada aqui e
+  // no rótulo do painel para nunca ficar ambígua pra quem olhar o dashboard.
+  const NPS_PROMOTER_MIN = 4.5;
+  const NPS_NEUTRAL_MIN = 3.5;
+
+  /* ---------- Marca (mesmo padrão do index.html) ---------- */
+  // Login: logo grande, com o mesmo placeholder pontilhado "Seu logo aqui" do index.html
+  // quando não há CONFIG.LOGO_DATA_URI/LOGO_URL.
+  function buildLoginLogo(target) {
+    const src = CONFIG.LOGO_DATA_URI || CONFIG.LOGO_URL;
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = CONFIG.RESTAURANT_NAME;
+      target.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'logo-placeholder';
+      ph.textContent = 'Seu logo aqui';
+      target.appendChild(ph);
+    }
+  }
+
+  // Topbar: só mostra o logo quando configurado (espaço pequeno demais pro placeholder).
+  function buildTopbarLogo(target) {
+    const src = CONFIG.LOGO_DATA_URI || CONFIG.LOGO_URL;
+    if (!src) return;
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = CONFIG.RESTAURANT_NAME;
+    target.appendChild(img);
+  }
+
+  /* ---------- Backend ---------- */
+  // Uma tentativa de POST ao webhook. Devolve o JSON da resposta, ou null em falha de rede,
+  // timeout, ou corpo que não seja JSON (o redirecionamento do Apps Script via
+  // script.googleusercontent.com falha de forma transitória de vez em quando — confirmado
+  // testando contra produção — daí o retry em apiCall abaixo, mesmo padrão do api() do index.html).
+  async function apiCallOnce(payload) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    try {
+      const res = await fetch(CONFIG.WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
+        body: JSON.stringify(payload),
+        signal: ctrl.signal
+      });
+      return await res.json();
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Falha transitória = sem resposta JSON com `ok` (rede, redirect do Apps Script) OU
+  // `transient: true` vindo do backend (lock ocupado, erro interno do Google). Essas são
+  // repetidas até API_MAX_ATTEMPTS vezes, com espera crescente; erros de negócio (ok:false
+  // sem `transient`, ex. "Senha incorreta") voltam na hora.
+  const API_MAX_ATTEMPTS = 3;
+  async function apiCall(payload) {
+    let last = null;
+    for (let attempt = 0; attempt < API_MAX_ATTEMPTS; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, CONFIG.API_RETRY_DELAY_MS * attempt));
+      const r = await apiCallOnce(payload);
+      if (r && typeof r.ok === 'boolean') {
+        if (!r.transient) return r;
+        last = r;
+      }
+    }
+    return last || { ok: false, network: true, error: 'Não foi possível conectar ao servidor. Verifique sua internet.' };
+  }
+
+  function fetchAdminData(senha) {
+    return apiCall({ action: 'admin', senha: senha });
+  }
+
+  function fetchFidelidadeAdmin(senha) {
+    return apiCall({ action: 'fidelidadeAdmin', senha: senha });
+  }
+
+  function parseFidRow(r) {
+    const d = r.ultimaAtividade ? new Date(r.ultimaAtividade) : null;
+    return {
+      telefone: r.telefone || '',
+      nome: r.nome || '',
+      selosAtuais: Number(r.selosAtuais) || 0,
+      selosTotal: Number(r.selosTotal) || 0,
+      resgatesTotal: Number(r.resgatesTotal) || 0,
+      ultimaAtividade: d && !isNaN(d.getTime()) ? d : null
+    };
+  }
+
+  // Exportação (.xlsx) — action:"export" devolve TODAS as colunas, inclusive WhatsApp (exceção
+  // deliberada à regra do action:"admin", pedida especificamente pro botão de exportar; ver
+  // CLAUDE.md). Reaproveita a senha já validada desta sessão (sessionStorage), sem pedir de novo.
+  function fetchExportData(senha, cupons) {
+    return apiCall({ action: 'export', senha: senha, cupons: cupons });
+  }
+
+  async function exportXlsx() {
+    const btn = $('#btn-export');
+    let senha;
+    try { senha = sessionStorage.getItem(SESSION_KEY); } catch (e) { senha = null; }
+    if (!senha) return; // não deveria acontecer: o botão só existe dentro do dashboard, já logado
+
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Exportando...';
+
+    // Exporta exatamente o que está na tela: todas as respostas do intervalo de datas e dos
+    // cross-filters ativos no momento, todas as páginas da tabela — não só a página atual.
+    const cupons = currentRows.map(r => r.cupom).filter(Boolean);
+    const r = await fetchExportData(senha, cupons);
+
+    if (r && r.ok === true && Array.isArray(r.rows)) {
+      try {
+        const aoa = [r.headers].concat(r.rows);
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Respostas');
+        const now = new Date();
+        const stamp = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+        XLSX.writeFile(wb, 'respostas-' + stamp + '.xlsx');
+      } catch (e) {
+        console.error('Falha ao montar o .xlsx:', e);
+        btn.textContent = 'Falha ao exportar';
+        setTimeout(() => { btn.textContent = original; }, 2500);
+        btn.disabled = false;
+        return;
+      }
+    } else {
+      console.error('Falha ao exportar:', r && r.error);
+      btn.textContent = 'Falha ao exportar';
+      setTimeout(() => { btn.textContent = original; }, 2500);
+      btn.disabled = false;
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+
+  function parseRow(r) {
+    const notas = [Number(r.notaComida), Number(r.notaAtendimento), Number(r.notaAmbiente)];
+    const media = (notas[0] + notas[1] + notas[2]) / 3;
+    const data = r.data ? new Date(r.data) : null;
+    return {
+      cupom: r.cupom || '',
+      data: data && !isNaN(data.getTime()) ? data : null,
+      nome: r.nome || '',
+      notas: notas,
+      media: media,
+      comentario: r.comentario || '',
+      premio: r.premio || '',
+      status: r.status || ''
+    };
+  }
+
+  /* ---------- Login ---------- */
+  async function tryLogin() {
+    const pass = $('#in-pass').value;
+    const btn = $('#btn-login');
+    const err = $('#login-error');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+
+    const r = await fetchAdminData(pass);
+
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+
+    // Login só é considerado válido quando o backend de fato devolve os dados — nunca por
+    // comparação de string aqui no front-end.
+    if (r && r.ok === true && Array.isArray(r.rows)) {
+      ALL = r.rows.map(parseRow).sort((a, b) => (b.data || 0) - (a.data || 0));
+      if (CONFIG.LOYALTY_ENABLED) await loadFidelidadeAdmin(pass);
+      try { sessionStorage.setItem(SESSION_KEY, pass); } catch (e) { /* ignora */ }
+      showDashboard();
+    } else {
+      err.textContent = (r && r.error) ? r.error : 'Não foi possível entrar.';
+      err.style.display = 'block';
+    }
+  }
+
+  // Carrega o cadastro do cartão fidelidade com a mesma senha já validada pelo action:"admin".
+  // Falha aqui não bloqueia o login (o painel de fidelidade só fica vazio) — o resto do
+  // dashboard (CSAT/NPS) continua funcionando normalmente.
+  async function loadFidelidadeAdmin(senha) {
+    const r = await fetchFidelidadeAdmin(senha);
+    FID_ALL = (r && r.ok === true && Array.isArray(r.rows)) ? r.rows.map(parseFidRow) : [];
+  }
+
+  function logout() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignora */ }
+    ALL = [];
+    currentRows = [];
+    filterStartDate = null;
+    filterEndDate = null;
+    crossFilters = { month: null, day: null, premio: null, status: null, npsBucket: null };
+    tablePage = 1;
+    FID_ALL = [];
+    fidTablePage = 1;
+    fidSearchQuery = '';
+    $('#fid-search').value = '';
+    dashboard.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    $('#in-pass').value = '';
+    $('#in-pass').focus();
+  }
+
+  // dd/mm/aaaa -> 'yyyy-mm-dd' (formato exigido por <input type="date">).
+  function toDateInputValue(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function showDashboard() {
+    loginScreen.style.display = 'none';
+    dashboard.style.display = 'block';
+
+    // Pesquisa (REWARD_MODE) e fidelidade (LOYALTY_ENABLED) são dois produtos independentes —
+    // cada painel liga/desliga pelo seu próprio campo, não um a negação do outro.
+    const showRoleta = CONFIG.REWARD_MODE === 'ROLETA';
+    const showFidelidade = !!CONFIG.LOYALTY_ENABLED;
+    $('#panel-roleta').hidden = !showRoleta;
+    $('#panel-fidelidade').hidden = !showFidelidade;
+    // "Cupons resgatados" só existe no modo roleta (é a única hora que há cupom nas respostas).
+    $('#kpi-card-resgate').hidden = !showRoleta;
+
+    // Data inicial dos campos De/Até: o intervalo completo dos dados carregados, pra já
+    // mostrar tudo (equivalente ao antigo botão "Tudo") sem deixar os campos em branco.
+    const withDate = ALL.filter(r => r.data);
+    if (withDate.length) {
+      const oldest = withDate.reduce((a, r) => r.data < a ? r.data : a, withDate[0].data);
+      const newest = withDate.reduce((a, r) => r.data > a ? r.data : a, withDate[0].data);
+      filterStartDate = new Date(oldest.getFullYear(), oldest.getMonth(), oldest.getDate());
+      filterEndDate = new Date(newest.getFullYear(), newest.getMonth(), newest.getDate());
+      $('#date-start').value = toDateInputValue(filterStartDate);
+      $('#date-end').value = toDateInputValue(filterEndDate);
+    }
+
+    renderAll();
+  }
+
+  /* ---------- Filtro de datas + cross-filtering + orquestração ---------- */
+  function fmtDate(d) {
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+  }
+
+  function endOfDay(d) {
+    const e = new Date(d);
+    e.setHours(23, 59, 59, 999);
+    return e;
+  }
+
+  // Aplica o intervalo De/Até. null em qualquer lado = sem limite naquele lado.
+  function rowsInDateRange(rows) {
+    return rows.filter(r => {
+      if (filterStartDate && r.data < filterStartDate) return false;
+      if (filterEndDate && r.data > endOfDay(filterEndDate)) return false;
+      return true;
+    });
+  }
+
+  // Aplica todas as dimensões de cross-filter ativas, em E lógico — cada clique em gráfico
+  // afeta esta função (e portanto todo o resto do painel) de forma uniforme.
+  function applyCrossFilters(rows) {
+    let out = rows;
+    if (crossFilters.month) out = out.filter(r => monthKeyOf(r.data) === crossFilters.month);
+    if (crossFilters.day) out = out.filter(r => dayKeyOf(r.data) === crossFilters.day);
+    if (crossFilters.premio) out = out.filter(r => r.premio === crossFilters.premio);
+    if (crossFilters.status) out = out.filter(r => r.status === crossFilters.status);
+    if (crossFilters.npsBucket) out = out.filter(r => npsBucket(r.media) === crossFilters.npsBucket);
+    return out;
+  }
+
+  // Conjunto usado por quase todo o painel: intervalo de datas + cross-filters.
+  function computeCurrentRows() {
+    return applyCrossFilters(rowsInDateRange(ALL.filter(r => r.data)));
+  }
+
+  // Só pra evolução do NPS: ignora o intervalo de datas de propósito, mas aplica os
+  // cross-filters normalmente (inclusive os que ela mesma gera ao clicar numa barra).
+  function computeNPSTrendRows() {
+    return applyCrossFilters(ALL.filter(r => r.data));
+  }
+
+  function hasAnyCrossFilter() {
+    return !!(crossFilters.month || crossFilters.day || crossFilters.premio || crossFilters.status || crossFilters.npsBucket);
+  }
+
+  // Limpa uma dimensão (chip individual) ou tudo (botão "Limpar filtros"); sempre re-renderiza.
+  function clearCrossFilter(key) {
+    if (key === 'month') { crossFilters.month = null; crossFilters.day = null; } // limpar o mês limpa o dia junto
+    else crossFilters[key] = null;
+    tablePage = 1;
+    renderAll();
+  }
+
+  function clearAllCrossFilters() {
+    crossFilters = { month: null, day: null, premio: null, status: null, npsBucket: null };
+    tablePage = 1;
+    renderAll();
+  }
+
+  function renderActiveFiltersBar() {
+    const bar = $('#active-filters-bar');
+    const chips = [];
+    if (crossFilters.month) {
+      chips.push({ key: 'month', label: crossFilters.day ? crossFilters.day.slice(-2) + ' de ' + monthLabelOf(crossFilters.month) : monthLabelOf(crossFilters.month) });
+    }
+    if (crossFilters.premio) chips.push({ key: 'premio', label: 'Prêmio: ' + crossFilters.premio });
+    if (crossFilters.status) chips.push({ key: 'status', label: 'Status: ' + crossFilters.status });
+    if (crossFilters.npsBucket) chips.push({ key: 'npsBucket', label: NPS_LABELS[crossFilters.npsBucket] });
+
+    if (!chips.length) { bar.hidden = true; return; }
+    bar.hidden = false;
+    $('#active-filters-chips').innerHTML = chips.map(c =>
+      '<span class="filter-chip">' + escapeHtml(c.label) +
+      '<button type="button" class="filter-chip-x" data-key="' + c.key + '" aria-label="Remover filtro">&times;</button></span>'
+    ).join('');
+    $('#active-filters-chips').querySelectorAll('.filter-chip-x').forEach(btn => {
+      btn.addEventListener('click', () => clearCrossFilter(btn.dataset.key));
+    });
+  }
+
+  function renderAll() {
+    const rows = computeCurrentRows();
+    currentRows = rows;
+
+    const now = new Date();
+    const oldest = rows.length ? rows[rows.length - 1].data : now;
+    const newest = rows.length ? rows[0].data : now;
+    $('#period-label').textContent = rows.length + ' resposta' + (rows.length === 1 ? '' : 's') +
+      (rows.length ? ' · ' + fmtDate(oldest) + ' a ' + fmtDate(newest) : '');
+
+    renderActiveFiltersBar();
+
+    // Cada seção é independente: se uma falhar (CDN do gráfico bloqueado, por exemplo), o
+    // resto do painel continua funcionando.
+    safeRender(renderKPIs, rows);
+    safeRender(renderNPSDoughnut, rows);
+    safeRender(renderNPSTrend); // ignora o intervalo de datas de propósito; calcula seu próprio conjunto
+    safeRender(renderTrend, rows);
+    safeRender(renderCatTrend, rows);
+    safeRender(renderCategoryBreakdown, rows);
+    if (CONFIG.LOYALTY_ENABLED) safeRender(renderFidelidade);
+    if (CONFIG.REWARD_MODE === 'ROLETA') {
+      safeRender(renderPrizes, rows);
+      safeRender(renderStatus, rows);
+    }
+    safeRender(renderTable, rows);
+  }
+
+  function safeRender(fn, rows) {
+    try {
+      fn(rows);
+    } catch (e) {
+      console.error('Falha ao renderizar ' + fn.name + ':', e);
+    }
+  }
+
+  /* ---------- Seções ---------- */
+  function renderKPIs(rows) {
+    const total = rows.length;
+    const media = total ? rows.reduce((a, r) => a + r.media, 0) / total : 0;
+    const resgatados = rows.filter(r => r.status === 'Concluído').length;
+    const comComentario = rows.filter(r => r.comentario.trim().length > 0).length;
+    $('#kpi-total').textContent = total;
+    $('#kpi-media').innerHTML = media.toFixed(2) + ' <span class="unit">/ 5</span>';
+    $('#kpi-resgate').innerHTML = (total ? Math.round(resgatados / total * 100) : 0) + ' <span class="unit">%</span>';
+    $('#kpi-comentarios').innerHTML = (total ? Math.round(comComentario / total * 100) : 0) + ' <span class="unit">%</span>';
+  }
+
+  /* ---------- Promotores / Neutros / Detratores ---------- */
+  // Não é NPS de verdade (a pesquisa não tem a pergunta de 0–10, só as 3 notas do CSAT) — é
+  // uma régua análoga sobre a média das 3 notas, com os cortes documentados no CSS/HTML acima
+  // e aqui, pra nunca ficar ambígua.
+  function npsBucket(media) {
+    if (media >= NPS_PROMOTER_MIN) return 'promoter';
+    if (media >= NPS_NEUTRAL_MIN) return 'neutral';
+    return 'detractor';
+  }
+
+  function npsCounts(rows) {
+    const c = { promoter: 0, neutral: 0, detractor: 0 };
+    rows.forEach(r => { c[npsBucket(r.media)]++; });
+    return c;
+  }
+
+  // Paleta pastel "Moderna & Suave" — mesma constante alimenta os dois gráficos (rosca e
+  // evolução em barras) e suas legendas, então trocar aqui já cobre os dois de uma vez.
+  const NPS_COLORS = { promoter: '#81C784', neutral: '#FFD54F', detractor: '#E57373' };
+  const NPS_LABELS = { promoter: 'Promotores', neutral: 'Neutros', detractor: 'Detratores' };
+  const NPS_BUCKET_KEYS = ['promoter', 'neutral', 'detractor']; // ordem fixa usada em toda parte
+
+  // Rosca: distribuição do período selecionado (data + cross-filters, como o resto do
+  // painel). Clicar numa fatia filtra o painel inteiro por aquela faixa (Promotor/Neutro/
+  // Detrator) — clicar de novo na mesma fatia desfaz.
+  function renderNPSDoughnut(rows) {
+    const counts = npsCounts(rows);
+    const total = rows.length || 1;
+    const keys = NPS_BUCKET_KEYS;
+
+    const ctx = $('#chart-nps-donut').getContext('2d');
+    if (npsDonutChart) npsDonutChart.destroy();
+    npsDonutChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: keys.map(k => NPS_LABELS[k]),
+        datasets: [{
+          data: keys.map(k => counts[k]),
+          backgroundColor: keys.map(k => NPS_COLORS[k]),
+          borderColor: '#fff', borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' (' + Math.round(c.parsed / total * 100) + '%)' } }
+        },
+        onClick: (evt, elements) => {
+          if (!elements || !elements.length) return;
+          const key = keys[elements[0].index];
+          crossFilters.npsBucket = (crossFilters.npsBucket === key) ? null : key;
+          tablePage = 1;
+          renderAll();
+        },
+        onHover: (evt, elements) => {
+          if (evt && evt.native && evt.native.target) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          }
+        }
+      }
+    });
+
+    $('#nps-donut-caption').textContent = rows.length + ' resposta' + (rows.length === 1 ? '' : 's') + ' no período selecionado';
+  }
+
+  /* ---------- Evolução da nota média (mensal, com drilldown pro dia) ---------- */
+  function monthKeyOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function dayKeyOf(d) { return monthKeyOf(d) + '-' + String(d.getDate()).padStart(2, '0'); }
+  const MONTH_NAMES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function monthLabelOf(key) {
+    const parts = key.split('-').map(Number);
+    return MONTH_NAMES[parts[1] - 1] + '/' + parts[0];
+  }
+
+  // Agrupa linhas por chave (keyFn recebe a LINHA inteira, ex.: r => monthKeyOf(r.data)),
+  // devolvendo { chave: [linhas...] } — reaproveitado pelos três gráficos temporais (nota
+  // geral, por categoria, evolução do NPS).
+  function groupByPeriod(rows, keyFn) {
+    const groups = {};
+    rows.slice().sort((a, b) => a.data - b.data).forEach(r => {
+      const k = keyFn(r);
+      (groups[k] = groups[k] || []).push(r);
+    });
+    return groups;
+  }
+
+  // Dispatcher: chamado sempre pelo mesmo nome (renderTrend) pelo safeRender/renderAll — decide
+  // mensal vs. diário a partir do cross-filter COMPARTILHADO crossFilters.month (não de uma
+  // variável própria), porque clicar num mês precisa fazer o drilldown deste gráfico E filtrar
+  // os outros ao mesmo tempo — as duas coisas são o mesmo clique, então é o mesmo estado.
+  function renderTrend(rows) {
+    if (crossFilters.month) renderTrendDaily(rows, crossFilters.month);
+    else renderTrendMonthly(rows);
+  }
+
+  function renderTrendMonthly(rows) {
+    $('#trend-sub').textContent = 'Visão mensal — clique num ponto para filtrar o painel inteiro por aquele mês';
+
+    const byMonth = groupByPeriod(rows, r => monthKeyOf(r.data));
+    trendMonthKeys = Object.keys(byMonth).sort();
+    const labels = trendMonthKeys.map(monthLabelOf);
+    const values = trendMonthKeys.map(k => byMonth[k].reduce((a, r) => a + r.media, 0) / byMonth[k].length);
+
+    buildTrendChart(labels, values, index => {
+      const key = trendMonthKeys[index];
+      if (!key) return;
+      // Clicar no mesmo mês de novo desfaz o filtro (toggle) — senão troca pro mês clicado.
+      crossFilters.month = (crossFilters.month === key) ? null : key;
+      crossFilters.day = null;
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  function renderTrendDaily(rows, monthKeyValue) {
+    $('#trend-sub').textContent = 'Dias de ' + monthLabelOf(monthKeyValue) + ' — clique num dia pra filtrar só por ele';
+
+    const dayRows = rows.filter(r => monthKeyOf(r.data) === monthKeyValue);
+    const byDay = groupByPeriod(dayRows, r => dayKeyOf(r.data));
+    trendDayKeys = Object.keys(byDay).sort();
+    const labels = trendDayKeys.map(k => k.slice(-2)); // só o número do dia
+    const values = trendDayKeys.map(k => byDay[k].reduce((a, r) => a + r.media, 0) / byDay[k].length);
+
+    buildTrendChart(labels, values, index => {
+      const key = trendDayKeys[index];
+      if (!key) return;
+      crossFilters.day = (crossFilters.day === key) ? null : key;
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  function buildTrendChart(labels, values, onPointClick) {
+    const ctx = $('#chart-trend').getContext('2d');
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values.map(v => Math.round(v * 100) / 100),
+          borderColor: '#000000',
+          backgroundColor: 'rgba(255,209,0,0.25)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointHitRadius: 10,
+          pointBackgroundColor: '#000',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        onClick: onPointClick ? (evt, elements) => {
+          if (elements && elements.length) onPointClick(elements[0].index);
+        } : undefined,
+        onHover: onPointClick ? (evt, elements) => {
+          if (evt && evt.native && evt.native.target) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          }
+        } : undefined,
+        scales: {
+          y: { min: 1, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#F0F0F0' } },
+          x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  /* ---------- Evolução da nota média por categoria (mesma lógica de drilldown, 3 séries) ---------- */
+  // Comida, Atendimento, Ambiente — sem significado semântico, também segue o tema (mesmo
+  // princípio de PRIZE_COLORS acima); mesma cor na linha e na legenda.
+  const CAT_COLORS = [temaSerie(1, '#64B5F6'), temaSerie(2, '#BA68C8'), temaSerie(3, '#4DB6AC')];
+
+  // Mesmo princípio do renderTrend acima: lê o cross-filter compartilhado crossFilters.month,
+  // não uma variável própria — clicar num mês faz o drilldown deste gráfico E filtra os outros.
+  function renderCatTrend(rows) {
+    if (crossFilters.month) renderCatTrendDaily(rows, crossFilters.month);
+    else renderCatTrendMonthly(rows);
+  }
+
+  function renderCatTrendMonthly(rows) {
+    $('#cat-trend-sub').textContent = 'Comida, atendimento e ambiente — visão mensal, clique num ponto para filtrar o painel inteiro por aquele mês';
+
+    const byMonth = groupByPeriod(rows, r => monthKeyOf(r.data));
+    catTrendMonthKeys = Object.keys(byMonth).sort();
+    const labels = catTrendMonthKeys.map(monthLabelOf);
+    const buckets = catTrendMonthKeys.map(k => byMonth[k]);
+
+    buildCatTrendChart(labels, buckets, index => {
+      const key = catTrendMonthKeys[index];
+      if (!key) return;
+      crossFilters.month = (crossFilters.month === key) ? null : key;
+      crossFilters.day = null;
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  function renderCatTrendDaily(rows, monthKeyValue) {
+    $('#cat-trend-sub').textContent = 'Comida, atendimento e ambiente — dias de ' + monthLabelOf(monthKeyValue) + ' — clique num dia pra filtrar só por ele';
+
+    const dayRows = rows.filter(r => monthKeyOf(r.data) === monthKeyValue);
+    const byDay = groupByPeriod(dayRows, r => dayKeyOf(r.data));
+    catTrendDayKeys = Object.keys(byDay).sort();
+    const labels = catTrendDayKeys.map(k => k.slice(-2));
+    const buckets = catTrendDayKeys.map(k => byDay[k]);
+
+    buildCatTrendChart(labels, buckets, index => {
+      const key = catTrendDayKeys[index];
+      if (!key) return;
+      crossFilters.day = (crossFilters.day === key) ? null : key;
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  // `buckets`: um array de linhas por rótulo do eixo X (um mês ou um dia cada).
+  function buildCatTrendChart(labels, buckets, onPointClick) {
+    const datasets = CATS.map((c, i) => ({
+      label: c.label,
+      data: buckets.map(b => b.length ? Math.round((b.reduce((a, r) => a + r.notas[c.idx], 0) / b.length) * 100) / 100 : null),
+      borderColor: CAT_COLORS[i],
+      backgroundColor: CAT_COLORS[i],
+      borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, pointHitRadius: 10, tension: 0.3, fill: false, spanGaps: true
+    }));
+
+    const ctx = $('#chart-cat-trend').getContext('2d');
+    if (catTrendChart) catTrendChart.destroy();
+    catTrendChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10.5 } } } },
+        onClick: onPointClick ? (evt, elements) => {
+          if (elements && elements.length) onPointClick(elements[0].index);
+        } : undefined,
+        onHover: onPointClick ? (evt, elements) => {
+          if (evt && evt.native && evt.native.target) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          }
+        } : undefined,
+        scales: {
+          y: { min: 1, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#F0F0F0' } },
+          x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Resumo estático "de relance" do período selecionado — mantido ao lado do gráfico de
+  // evolução por categoria acima (o gráfico mostra a tendência; este mostra o valor atual).
+  function renderCategoryBreakdown(rows) {
+    const total = rows.length || 1;
+    const html = CATS.map(c => {
+      const avg = rows.reduce((a, r) => a + r.notas[c.idx], 0) / total;
+      const pct = (avg / 5 * 100).toFixed(0);
+      return '<div class="breakdown-row">' +
+        '<div class="breakdown-label">' + c.label + '</div>' +
+        '<div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="breakdown-value">' + avg.toFixed(2) + '</div>' +
+      '</div>';
+    }).join('');
+    $('#breakdown-cats').innerHTML = html;
+  }
+
+  /* ---------- Evolução de Promotores/Neutros/Detratores ----------
+     Base: computeNPSTrendRows() — SEMPRE ignora o filtro de datas De/Até (pedido explícito),
+     mas passa pelos cross-filters normalmente (inclusive os que este próprio gráfico gera).
+     Mensal vs. diário também lê crossFilters.month/.day, compartilhado com os outros dois
+     gráficos temporais — mesmo princípio de renderTrend/renderCatTrend acima. */
+  function renderNPSTrend() {
+    const rows = computeNPSTrendRows();
+    if (crossFilters.month) renderNPSTrendDaily(rows, crossFilters.month);
+    else renderNPSTrendMonthly(rows);
+  }
+
+  function renderNPSTrendMonthly(rows) {
+    $('#nps-trend-sub').textContent = 'Sempre o histórico completo (ignora o filtro De/Até acima) — clique num ponto ou numa cor da barra para filtrar o painel inteiro por mês/faixa';
+
+    const byMonth = groupByPeriod(rows, r => monthKeyOf(r.data));
+    npsTrendMonthKeys = Object.keys(byMonth).sort();
+    const labels = npsTrendMonthKeys.map(monthLabelOf);
+    const buckets = npsTrendMonthKeys.map(k => byMonth[k]);
+
+    // Clicar na BARRA (fora de um segmento colorido específico) filtra só por mês; clicar
+    // dentro de um segmento (ex.: a parte verde de "Promotores") filtra por mês E pela faixa
+    // ao mesmo tempo — um único clique define os dois cross-filters de uma vez.
+    buildNPSTrendChart(labels, buckets, (index, datasetIndex) => {
+      const monthKey = npsTrendMonthKeys[index];
+      if (!monthKey) return;
+      const bucketKey = datasetIndex != null ? NPS_BUCKET_KEYS[datasetIndex] : null;
+      if (crossFilters.month === monthKey && (!bucketKey || crossFilters.npsBucket === bucketKey)) {
+        // clicar de novo no mesmo mês/segmento desfaz
+        crossFilters.month = null;
+        crossFilters.day = null;
+        if (bucketKey) crossFilters.npsBucket = null;
+      } else {
+        crossFilters.month = monthKey;
+        crossFilters.day = null;
+        if (bucketKey) crossFilters.npsBucket = bucketKey;
+      }
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  function renderNPSTrendDaily(rows, monthKeyValue) {
+    $('#nps-trend-sub').textContent = 'Histórico completo — dias de ' + monthLabelOf(monthKeyValue) + ' — clique num dia pra filtrar só por ele';
+
+    const dayRows = rows.filter(r => monthKeyOf(r.data) === monthKeyValue);
+    const byDay = groupByPeriod(dayRows, r => dayKeyOf(r.data));
+    npsTrendDayKeys = Object.keys(byDay).sort();
+    const labels = npsTrendDayKeys.map(k => k.slice(-2));
+    const buckets = npsTrendDayKeys.map(k => byDay[k]);
+
+    buildNPSTrendChart(labels, buckets, (index, datasetIndex) => {
+      const dayKey = npsTrendDayKeys[index];
+      if (!dayKey) return;
+      const bucketKey = datasetIndex != null ? NPS_BUCKET_KEYS[datasetIndex] : null;
+      if (crossFilters.day === dayKey && (!bucketKey || crossFilters.npsBucket === bucketKey)) {
+        crossFilters.day = null;
+        if (bucketKey) crossFilters.npsBucket = null;
+      } else {
+        crossFilters.day = dayKey;
+        if (bucketKey) crossFilters.npsBucket = bucketKey;
+      }
+      tablePage = 1;
+      renderAll();
+    });
+  }
+
+  // Barras 100% empilhadas: cada rótulo do eixo X soma 100% entre Promotor/Neutro/Detrator.
+  // onSegmentClick(index, datasetIndex): datasetIndex vem null se o clique não caiu em cima
+  // de nenhum segmento específico (Chart.js ainda assim reporta o índice do rótulo X mais
+  // próximo em modo 'index', então tratamos como "só o mês/dia, sem faixa").
+  function buildNPSTrendChart(labels, buckets, onSegmentClick) {
+    const datasets = NPS_BUCKET_KEYS.map(k => ({
+      label: NPS_LABELS[k],
+      data: buckets.map(b => { const c = npsCounts(b); return b.length ? Math.round(c[k] / b.length * 100) : 0; }),
+      backgroundColor: NPS_COLORS[k]
+    }));
+
+    const ctx = $('#chart-nps-trend').getContext('2d');
+    if (npsTrendChart) npsTrendChart.destroy();
+    npsTrendChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: true }, // permite identificar QUAL segmento foi clicado
+        plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10.5 } } } },
+        onClick: (evt, elements) => {
+          if (!elements || !elements.length) return;
+          onSegmentClick(elements[0].index, elements[0].datasetIndex);
+        },
+        onHover: (evt, elements) => {
+          if (evt && evt.native && evt.native.target) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          }
+        },
+        scales: {
+          y: { stacked: true, min: 0, max: 100, ticks: { stepSize: 25, font: { size: 11 }, callback: v => v + '%' }, grid: { color: '#F0F0F0' } },
+          x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Clicar numa barra filtra o painel inteiro por aquele prêmio (clicar de novo desfaz).
+  function renderPrizes(rows) {
+    // '-' é o marcador de "sem prêmio" (REWARD_MODE 'NENHUM') — não é um prêmio de verdade,
+    // não entra no gráfico (só relevante se esse modo coexistir com ROLETA no mesmo deployment).
+    const counts = {};
+    rows.forEach(r => { if (r.premio === '-') return; counts[r.premio] = (counts[r.premio] || 0) + 1; });
+    const labels = Object.keys(counts);
+    const values = labels.map(l => counts[l]);
+
+    const ctx = $('#chart-prizes').getContext('2d');
+    if (prizeChart) prizeChart.destroy();
+    prizeChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: labels.map((_, i) => PRIZE_COLORS[i % PRIZE_COLORS.length]),
+          borderRadius: 6,
+          maxBarThickness: 40
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        onClick: (evt, elements) => {
+          if (!elements || !elements.length) return;
+          const label = labels[elements[0].index];
+          crossFilters.premio = (crossFilters.premio === label) ? null : label;
+          tablePage = 1;
+          renderAll();
+        },
+        onHover: (evt, elements) => {
+          if (evt && evt.native && evt.native.target) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: '#F0F0F0' } },
+          x: { ticks: { font: { size: 10.5 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Cada linha é um <button>: clicar filtra o painel inteiro por aquele status (clicar de
+  // novo no mesmo desfaz). Usa <button>, não <div>, pra ganhar foco/teclado de graça, igual
+  // a todo o resto dos elementos clicáveis do site.
+  function renderStatus(rows) {
+    // '-' é o marcador de "sem prêmio" (REWARD_MODE 'NENHUM') — exclui essas linhas do total,
+    // senão elas diluem as porcentagens de Pendente/Concluído/Vencido sem motivo (não é um
+    // status de cupom de verdade).
+    const relevant = rows.filter(r => r.status !== '-');
+    const statuses = ['Pendente', 'Concluído', 'Vencido'];
+    const total = relevant.length || 1;
+    const html = statuses.map(s => {
+      const count = relevant.filter(r => r.status === s).length;
+      const pct = (count / total * 100).toFixed(0);
+      const active = crossFilters.status === s ? ' active' : '';
+      return '<button type="button" class="breakdown-row-clickable' + active + '" data-status="' + escapeHtml(s) + '">' +
+        '<span class="breakdown-row">' +
+          '<span class="breakdown-label">' + s + '</span>' +
+          '<span class="breakdown-bar-bg"><span class="breakdown-bar-fill" style="width:' + pct + '%"></span></span>' +
+          '<span class="breakdown-value">' + count + '</span>' +
+        '</span>' +
+      '</button>';
+    }).join('');
+    $('#breakdown-status').innerHTML = html;
+    $('#breakdown-status').querySelectorAll('.breakdown-row-clickable').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.status;
+        crossFilters.status = (crossFilters.status === s) ? null : s;
+        tablePage = 1;
+        renderAll();
+      });
+    });
+  }
+
+  function pillClass(status) {
+    if (status === 'Pendente') return 'pill-pendente';
+    if (status === 'Concluído') return 'pill-concluido';
+    if (status === '-') return 'pill-neutro'; // resposta do modo fidelidade, sem cupom/status
+    return 'pill-vencido';
+  }
+
+  const TABLE_PAGE_SIZE = 20;
+
+  function renderTable(rows) {
+    const totalPages = Math.max(1, Math.ceil(rows.length / TABLE_PAGE_SIZE));
+    if (tablePage > totalPages) tablePage = totalPages;
+    if (tablePage < 1) tablePage = 1;
+    const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+    const page = rows.slice(start, start + TABLE_PAGE_SIZE);
+
+    $('#page-label').textContent = 'Página ' + tablePage + ' de ' + totalPages +
+      ' (' + rows.length + ' resposta' + (rows.length === 1 ? '' : 's') + ')';
+    $('#btn-page-prev').disabled = tablePage <= 1;
+    $('#btn-page-next').disabled = tablePage >= totalPages;
+
+    if (!page.length) {
+      $('#table-body').innerHTML = '';
+      $('#table-body').closest('table').style.display = 'none';
+      return;
+    }
+    $('#table-body').closest('table').style.display = '';
+    const html = page.map(r => {
+      const d = r.data;
+      const dataStr = d ? fmtDate(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : '—';
+      // Escapar o comentário real primeiro; o traço de "sem comentário" é HTML de propósito,
+      // não deve ser escapado de novo por cima (isso imprimiria a tag em vez de renderizá-la).
+      const comentarioHtml = r.comentario ? escapeHtml(r.comentario) : '<span class="comment-empty">—</span>';
+      return '<tr>' +
+        '<td>' + escapeHtml(dataStr) + '</td>' +
+        '<td class="name-cell">' + escapeHtml(r.nome) + '</td>' +
+        '<td class="stars">' + r.notas.join(' · ') + ' (méd. ' + r.media.toFixed(1) + ')</td>' +
+        '<td class="comment-cell">' + comentarioHtml + '</td>' +
+        '<td>' + escapeHtml(r.premio) + '</td>' +
+        '<td><span class="pill ' + pillClass(r.status) + '">' + escapeHtml(r.status) + '</span></td>' +
+      '</tr>';
+    }).join('');
+    $('#table-body').innerHTML = html;
+  }
+
+  /* ---------- Cartão fidelidade (cadastro atual, sem filtro de datas) ---------- */
+  function renderFidelidade() {
+    const total = FID_ALL.length;
+    const selosDistribuidos = FID_ALL.reduce((a, r) => a + r.selosTotal, 0);
+    const resgates = FID_ALL.reduce((a, r) => a + r.resgatesTotal, 0);
+    $('#fid-kpi-clientes').textContent = total;
+    $('#fid-kpi-selos').textContent = selosDistribuidos;
+    $('#fid-kpi-resgates').textContent = resgates;
+
+    const q = fidSearchQuery.trim().toLowerCase();
+    const rows = q
+      ? FID_ALL.filter(r => r.nome.toLowerCase().includes(q) || r.telefone.includes(q))
+      : FID_ALL;
+
+    const totalPages = Math.max(1, Math.ceil(rows.length / FID_TABLE_PAGE_SIZE));
+    if (fidTablePage > totalPages) fidTablePage = totalPages;
+    if (fidTablePage < 1) fidTablePage = 1;
+    const start = (fidTablePage - 1) * FID_TABLE_PAGE_SIZE;
+    const page = rows.slice(start, start + FID_TABLE_PAGE_SIZE);
+
+    $('#fid-page-label').textContent = 'Página ' + fidTablePage + ' de ' + totalPages +
+      ' (' + rows.length + ' cliente' + (rows.length === 1 ? '' : 's') + ')';
+    $('#btn-fid-page-prev').disabled = fidTablePage <= 1;
+    $('#btn-fid-page-next').disabled = fidTablePage >= totalPages;
+
+    $('#fid-table-body').innerHTML = page.map(r => {
+      const dataStr = r.ultimaAtividade
+        ? fmtDate(r.ultimaAtividade) + ' ' + String(r.ultimaAtividade.getHours()).padStart(2, '0') + ':' + String(r.ultimaAtividade.getMinutes()).padStart(2, '0')
+        : '—';
+      return '<tr>' +
+        '<td class="name-cell">' + escapeHtml(r.nome) + '</td>' +
+        '<td>' + escapeHtml(r.telefone) + '</td>' +
+        '<td>' + r.selosAtuais + '</td>' +
+        '<td>' + r.selosTotal + '</td>' +
+        '<td>' + escapeHtml(dataStr) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* ---------- Wiring ---------- */
+  buildLoginLogo($('#login-logo'));
+  buildTopbarLogo($('#topbar-logo'));
+  $('#login-title').textContent = CONFIG.ADMIN_TITLE;
+  $('#dash-title').textContent = CONFIG.ADMIN_TITLE;
+  $('#login-subtitle').textContent = CONFIG.RESTAURANT_NAME + ' · resultados da pesquisa de satisfação';
+  document.title = CONFIG.ADMIN_TITLE + ' — ' + CONFIG.RESTAURANT_NAME;
+
+  $('#btn-login').addEventListener('click', tryLogin);
+  $('#in-pass').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  $('#btn-logout').addEventListener('click', logout);
+  $('#btn-export').addEventListener('click', exportXlsx);
+  $('#btn-page-prev').addEventListener('click', () => { tablePage--; safeRender(renderTable, currentRows); });
+  $('#btn-page-next').addEventListener('click', () => { tablePage++; safeRender(renderTable, currentRows); });
+  $('#btn-clear-filters').addEventListener('click', clearAllCrossFilters);
+
+  $('#fid-search').addEventListener('input', () => {
+    fidSearchQuery = $('#fid-search').value;
+    fidTablePage = 1;
+    safeRender(renderFidelidade);
+  });
+  $('#btn-fid-page-prev').addEventListener('click', () => { fidTablePage--; safeRender(renderFidelidade); });
+  $('#btn-fid-page-next').addEventListener('click', () => { fidTablePage++; safeRender(renderFidelidade); });
+
+  // Filtro por intervalo de datas: não reseta os cross-filters (eles combinam em E lógico
+  // com o intervalo de datas — ver applyCrossFilters/computeCurrentRows), só a página da
+  // tabela, porque o conjunto de linhas mudou.
+  $('#date-start').addEventListener('change', () => {
+    const v = $('#date-start').value;
+    filterStartDate = v ? new Date(v + 'T00:00:00') : null;
+    tablePage = 1;
+    renderAll();
+  });
+  $('#date-end').addEventListener('change', () => {
+    const v = $('#date-end').value;
+    filterEndDate = v ? new Date(v + 'T00:00:00') : null; // levado até o fim do dia em endOfDay()
+    tablePage = 1;
+    renderAll();
+  });
+
+  /* =======================================================================
+   * Chamada inicial — SEMPRE por último no arquivo, depois de toda
+   * declaração de const/let e de toda function. Ela é quem de fato aciona
+   * renderAll()/renderTrend() (via showDashboard()), então precisa vir
+   * depois de "let trendChart, prizeChart" e "let ALL" lá em cima terem
+   * sido executadas nesta rodada do script.
+   * ===================================================================== */
+  (async function tryAutoLogin() {
+    let saved;
+    try { saved = sessionStorage.getItem(SESSION_KEY); } catch (e) { saved = null; }
+    if (!saved) return;
+    const r = await fetchAdminData(saved);
+    if (r && r.ok === true && Array.isArray(r.rows)) {
+      ALL = r.rows.map(parseRow).sort((a, b) => (b.data || 0) - (a.data || 0));
+      if (CONFIG.LOYALTY_ENABLED) await loadFidelidadeAdmin(saved);
+      showDashboard();
+    } else {
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (e2) { /* ignora */ }
+    }
+  })();
+})();
+</script>
+</body>
+</html>
